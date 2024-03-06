@@ -1,0 +1,34 @@
+项目说明和更改
+
+pic1d_original.f90 
+保存了原始的代码。
+
+pic1d_test_tmp_full_f_2species.f90
+原名称：pic1d_full_f_2species_test.f90 
+测试full_f下运行,粒子种数nspecies修改为2种
+添加了gfortran下串行和并行编译的注释。服务器下cpu并行真的很快。
+修改了诊断步数ndiag=10，降低了诊断频次
+
+pic1d_diy_2_full_more_explain.f90
+原名称pic1d_2_full_more_explain.f90
+选择从排版较好的那版出发，本来就有2种粒子，测试full_f下运行.以后尽量在这一版基础上改。
+修改了诊断步数ndiag=10，降低了诊断频次
+添加了gfortran下串行和并行编译的注释。通过gfortran -fopenmp pic1d_diy_2_full_more_explain.f90 进行编译，然后./a.exe 运行。cpu并行真的很快，尤其是在服务器下。
+修改nparticle=100000，然后改回60000
+修改ntime=5000，然后改成1000
+注释了主程序中call history ，不调用history输出。
+在field诊断部分nt==1情况增设注释和代码，实现打开文件、记录粒子信息功能
+将粒子位置信息记录在particle_x.txt中，速度信息记录在particle_v.txt中
+
+read_particle_xv_one_scatter_fig.m
+用于读取粒子（电子）诊断信息的matlab脚本
+首先实现信息还原，先读到arx (array of x)和arv (array of v)中，然后每nparticle项画散点图
+先测试一幅，可以考虑第idiag次诊断结果
+
+py_readparticle_one_picture.py
+大概相当于将read_particle_xv_one_scatter_fig.m 文件转换为python版,仍然只能输出一张图
+
+py_readparticle_many_picture.py
+改进了上面的one_picture文件，可以输出多张图，进行idiag的遍历
+至此，诊断流程为：修改参数，编译pic1d_diy_2_full_more_explain.f90，运行a.exe，再修改参数运行py_readparticle_many_picture.py，去scatter_plots_py_many文件夹找结果，再运行py_imageio_combine2gif.py ，将文件夹里的图片拼接为图片
+

@@ -1,0 +1,6 @@
+output6 参数：vbeam=4.0，nbeam=50000
+output7 测试了filter(2:ngrid/8)=1.0 ，保留部分模数下的相图演化
+
+在xiao服务器上并行， 
+ntime=         999  total energy= -8.0465049E-02
+ Program CPU TIME=   135.5537    
