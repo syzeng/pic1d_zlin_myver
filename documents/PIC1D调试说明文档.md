@@ -19,6 +19,80 @@
 
 ## 诊断与粒子云图绘制
 在原程序中，诊断过程在field子程序中进行，history将诊断变量输出。现在，我们可以不适用原始的history子程序；针对我们感兴趣的粒子云图，我们可以自己写诊断方案，将粒子信息保存在文本文件中，然后利用第三方软件（如python）进行粒子云图绘制。
+![alt text](粒子云诊断步骤.png)
+
+在field子程序中，每次诊断，我们记录每个电子的x，v信息：
+
+```fortran
+open(partfx,file='particle_x.txt',status='replace')
+open(partfv,file='particle_v.txt',status='replace')
+k=1 !只记录电子
+do i=1,nparticle
+    !记录所有粒子信息
+    write(partfx,102)x(i,k)
+    write(partfv,102)v(i,k)
+enddo
+102 format(e14.5)
+```
+在python绘图程序中，我们读取记录下的文本文件，然后针对每次诊断，绘制成散点图，保存。
+```python
+# 指定文件名  
+filex = 'particle_x.txt'  
+filev = 'particle_v.txt'  
+  
+# 读取数据文件  
+with open(filex, 'r') as fx, open(filev, 'r') as fv:  
+    arx = np.loadtxt(fx)  
+    arv = np.loadtxt(fv)  
+
+#...(设置参数、保存路径)
+
+# 循环遍历每个诊断并生成散点图  
+for idiag in range(1, ntime // ndiag + 1):  
+    start_idx = (idiag - 1) * nparticle  
+    end_idx = idiag * nparticle  
+    #mystep=10 #每隔mystep个点选一个点
+  
+    plt.figure(figsize=(12, 8), dpi=100)  
+    marker_size = 0.1  
+    plt.scatter(arx[start_idx:end_idx:mystep], arv[start_idx:end_idx:mystep], s=marker_size, color='blue')  
+    #...设置图例、保存
+
+```
+对于生成的许多张诊断图，我们利用python的imageio库，将其拼接为gif动图：
+```python
+# 获取子文件夹中所有PNG文件的路径  
+image_paths = [os.path.join(os.getcwd(), subfolder, f) for f in os.listdir(os.path.join(os.getcwd(), subfolder)) if f.endswith('.png')]  
+  
+# 排序文件路径，确保它们按数字顺序排列  
+image_paths.sort(key=lambda x: int(os.path.splitext(x)[0].split('_')[-1]))  
+  
+# 使用imageio保存为GIF  
+with imageio.get_writer(os.path.join(os.getcwd(), 'scatter_animation_nparticle_{:d}_ntime_{:d}_ndiag_{:d}.gif'.format(nparticle,ntime,ndiag) ), mode='I', fps=fps) as writer:  
+    for path in image_paths:  
+        image = imageio.imread(path)  
+        writer.append_data(image)  
+```
+##Maxwell分布下电子相空间演化
+###涉及程序
+主要程序保存在文件夹 maxwell_particle_evolution中。
+fortran程序：pic1d_diy_2_full_more_explain.f90 
+python绘制粒子云图程序：py_readparticle_many_picture.py
+python动图绘制程序：py_imageio_combine2gif.py
+
+###参数和初始条件设置
+设置两种粒子：电子和离子。之后用k表示粒子种类，其中k=1是电子，k=2是离子。参数如下：
+```fortran
+    real,dimension(nspecie) ::  qspecie,aspecie,tspecie
+    data qspecie/-1.0,1./         !charge
+    data aspecie/1.0,100./          !mass
+    data tspecie/1.0,1./          !temperature
+```
+采用full_f和非线性模拟。初始粒子速度在load子程序中设置，默认设为Maxwell分布。
+模拟主要调节参数：模拟每种粒子数量nparticle,模拟时间步进次数ntime,诊断频率(每隔多少时间步长诊断一次)ndiag.对于`nparticle=60000,ntime=1000,ndiag=100`情况，绘制动图如下。
+![alt text](scatter_animation_nparticle_60000_ntime_5000_ndiag_20-1.gif)
+初始时刻图如下。对比可见，此情况下演化，相空间变化不大。这是对平衡情况验证。
+![alt text](scatter_plot_idiag_1.png)
 
 ### 初始速度的设置
 
