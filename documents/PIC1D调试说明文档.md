@@ -1,5 +1,5 @@
 
-
+![Alt text](scatter_twostream_animation_nparticle_60000_ntime_5000_ndiag_100.gif)
 ## PIC1D主程序算法框架
 
 1. **初始化阶段**：
@@ -89,11 +89,12 @@ python动图绘制程序：py_imageio_combine2gif.py
     data tspecie/1.0,1./          !temperature
 ```
 采用full_f和非线性模拟。初始粒子速度在load子程序中设置，默认设为Maxwell分布。
-模拟主要调节参数：模拟每种粒子数量nparticle,模拟时间步进次数ntime,诊断频率(每隔多少时间步长诊断一次)ndiag.对于`nparticle=60000,ntime=1000,ndiag=100`情况，绘制动图如下。
+模拟主要调节参数：模拟每种粒子数量nparticle,模拟时间步进次数ntime,诊断频率(每隔多少时间步长诊断一次)ndiag.对于`nparticle=60000,ntime=5000,ndiag=20`情况，绘制动图如下。
 ![alt text](scatter_animation_nparticle_60000_ntime_5000_ndiag_20-1.gif)
 初始时刻图如下。对比可见，此情况下演化，相空间变化不大。这是对平衡情况验证。
-![alt text](scatter_plot_idiag_1.png)
+![Alt text](scatter_plot_idiag_1-1.png)
 
+##双流初始条件下的演化
 ### 初始速度的设置
 
 首先我们在parameter中声明了我们的粒子数量，离子和电子均为`nparticle=60000`。然后我们设置`nbeam`为双束流电子总数。
@@ -162,6 +163,13 @@ elseif(k==1)then
 ```
 
 之后速度还会按温度和质量归一化. `v(:,k)=v(:,k)*sqrt(tspecie(k)/aspecie(k))`
+
+### 结果
+
+![Alt text](scatter_animation_nparticle_60000_ntime_5000_ndiag_100.gif)
+
+![Alt text](scatter_twostream_animation_nparticle_60000_ntime_5000_ndiag_100-1.gif)
+
 
 ### 场的计算和滤波
 
