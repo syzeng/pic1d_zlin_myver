@@ -1,5 +1,5 @@
 
-![Alt text](scatter_twostream_animation_nparticle_60000_ntime_5000_ndiag_100.gif)
+![Alt text](scatter_animation_nparticle_60000_ntime_3000_ndiag_10.gif)
 ## PIC1D主程序算法框架
 
 1. **初始化阶段**：
@@ -169,7 +169,8 @@ elseif(k==1)then
 ![Alt text](scatter_animation_nparticle_60000_ntime_5000_ndiag_100.gif)
 
 ![Alt text](scatter_twostream_animation_nparticle_60000_ntime_5000_ndiag_100-1.gif)
-
+放的慢一些：
+![Alt text](scatter_animation_nparticle_60000_ntime_3000_ndiag_10.gif)
 
 ### 场的计算和滤波
 
