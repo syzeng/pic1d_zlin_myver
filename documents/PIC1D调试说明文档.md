@@ -1,5 +1,5 @@
+![eigenmode](./refphoto/eigenmode.png)
 
-![Alt text](scatter_animation_nparticle_60000_ntime_3000_ndiag_10.gif)
 ## PIC1D主程序算法框架
 
 1. **初始化阶段**：
@@ -14,12 +14,12 @@
    - 分散在程序许多地方，记录信息用于诊断
    - 可以通过其它软件（如python）读取信息并绘图
 
-![alt text](mainprogramprocess.jpg)
+![mainprogramprocess](./refphoto/mainprogramprocess.jpg)
 主程序流程图。需要注意的是，与原始程序相比，流程图做了细微的调整：field和particle子程序接受参数nrk输入，相当于在particle子程序末添加一段周期性边界条件处理程序。
 
 ## 诊断与粒子云图绘制
 在原程序中，诊断过程在field子程序中进行，history将诊断变量输出。现在，我们可以不适用原始的history子程序；针对我们感兴趣的粒子云图，我们可以自己写诊断方案，将粒子信息保存在文本文件中，然后利用第三方软件（如python）进行粒子云图绘制。
-![alt text](粒子云诊断步骤.png)
+![粒子云诊断步骤](./refphoto/粒子云诊断步骤.png)
 
 在field子程序中，每次诊断，我们记录每个电子的x，v信息：
 
@@ -90,11 +90,12 @@ python动图绘制程序：py_imageio_combine2gif.py
 ```
 采用full_f和非线性模拟。初始粒子速度在load子程序中设置，默认设为Maxwell分布。
 模拟主要调节参数：模拟每种粒子数量nparticle,模拟时间步进次数ntime,诊断频率(每隔多少时间步长诊断一次)ndiag.对于`nparticle=60000,ntime=5000,ndiag=20`情况，绘制动图如下。
-![alt text](scatter_animation_nparticle_60000_ntime_5000_ndiag_20-1.gif)
-初始时刻图如下。对比可见，此情况下演化，相空间变化不大。这是对平衡情况验证。
-![Alt text](scatter_plot_idiag_1-1.png)
 
-##双流初始条件下的演化
+初始时刻图如下。对比可见，此情况下演化，相空间变化不大。这是对平衡情况验证。
+![scatter_plot_idiag_1-1](./refphoto/scatter_plot_idiag_1-1.png)
+
+## 双流初始条件下的演化
+
 ### 初始速度的设置
 
 首先我们在parameter中声明了我们的粒子数量，离子和电子均为`nparticle=60000`。然后我们设置`nbeam`为双束流电子总数。
@@ -166,11 +167,15 @@ elseif(k==1)then
 
 ### 结果
 
-![Alt text](scatter_animation_nparticle_60000_ntime_5000_ndiag_100.gif)
+![bluetwostreaminstability_animation_nparticle_60000_ntime_5000_ndiag_100](./refphoto/bluetwostreaminstability_animation_nparticle_60000_ntime_5000_ndiag_100.gif)
 
-![Alt text](scatter_twostream_animation_nparticle_60000_ntime_5000_ndiag_100-1.gif)
+![dcolortwostream_animation_nparticle_60000_ntime_5000_ndiag_100](./refphoto/dcolortwostream_animation_nparticle_60000_ntime_5000_ndiag_100.gif)
 放的慢一些：
-![Alt text](scatter_animation_nparticle_60000_ntime_3000_ndiag_10.gif)
+
+![dcolorslow_animation_nparticle_60000_ntime_3000_ndiag_10](./refphoto/dcolorslow_animation_nparticle_60000_ntime_3000_ndiag_10.gif)
+
+正在增长的本征模：
+![eigenmode](./refphoto/eigenmode.png)
 
 ### 场的计算和滤波
 

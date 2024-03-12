@@ -3,7 +3,7 @@
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
       
-      <link rel="stylesheet" href="file:///c:\Users\Administrator\.vscode\extensions\shd101wyy.markdown-preview-enhanced-0.8.11\crossnote\dependencies\katex\katex.min.css">
+      <link rel="stylesheet" href="file:///c:\Users\user\.vscode\extensions\shd101wyy.markdown-preview-enhanced-0.8.12\crossnote\dependencies\katex\katex.min.css">
       
       
       
@@ -24,7 +24,7 @@
     
       <div class="crossnote markdown-preview  ">
       
-<p><img src="scatter_animation_nparticle_60000_ntime_3000_ndiag_10.gif" alt="Alt text"></p>
+<p><img src="./refphoto/eigenmode.png" alt="eigenmode"></p>
 <h2 id="pic1d主程序算法框架">PIC1D主程序算法框架 </h2>
 <ol>
 <li><strong>初始化阶段</strong>：
@@ -54,11 +54,11 @@
 </ul>
 </li>
 </ol>
-<p><img src="mainprogramprocess.jpg" alt="alt text"><br>
+<p><img src="./refphoto/mainprogramprocess.jpg" alt="mainprogramprocess"><br>
 主程序流程图。需要注意的是，与原始程序相比，流程图做了细微的调整：field和particle子程序接受参数nrk输入，相当于在particle子程序末添加一段周期性边界条件处理程序。</p>
 <h2 id="诊断与粒子云图绘制">诊断与粒子云图绘制 </h2>
 <p>在原程序中，诊断过程在field子程序中进行，history将诊断变量输出。现在，我们可以不适用原始的history子程序；针对我们感兴趣的粒子云图，我们可以自己写诊断方案，将粒子信息保存在文本文件中，然后利用第三方软件（如python）进行粒子云图绘制。<br>
-<img src="%E7%B2%92%E5%AD%90%E4%BA%91%E8%AF%8A%E6%96%AD%E6%AD%A5%E9%AA%A4.png" alt="alt text"></p>
+<img src="./refphoto/%E7%B2%92%E5%AD%90%E4%BA%91%E8%AF%8A%E6%96%AD%E6%AD%A5%E9%AA%A4.png" alt="粒子云诊断步骤"></p>
 <p>在field子程序中，每次诊断，我们记录每个电子的x，v信息：</p>
 <pre data-role="codeBlock" data-info="fortran" class="language-fortran fortran"><code><span class="token keyword keyword-open">open</span><span class="token punctuation">(</span>partfx<span class="token punctuation">,</span><span class="token keyword keyword-file">file</span><span class="token operator">=</span><span class="token string">'particle_x.txt'</span><span class="token punctuation">,</span>status<span class="token operator">=</span><span class="token string">'replace'</span><span class="token punctuation">)</span>
 <span class="token keyword keyword-open">open</span><span class="token punctuation">(</span>partfv<span class="token punctuation">,</span><span class="token keyword keyword-file">file</span><span class="token operator">=</span><span class="token string">'particle_v.txt'</span><span class="token punctuation">,</span>status<span class="token operator">=</span><span class="token string">'replace'</span><span class="token punctuation">)</span>
@@ -104,23 +104,22 @@ image_paths<span class="token punctuation">.</span>sort<span class="token punctu
     <span class="token keyword keyword-for">for</span> path <span class="token keyword keyword-in">in</span> image_paths<span class="token punctuation">:</span>  
         image <span class="token operator">=</span> imageio<span class="token punctuation">.</span>imread<span class="token punctuation">(</span>path<span class="token punctuation">)</span>  
         writer<span class="token punctuation">.</span>append_data<span class="token punctuation">(</span>image<span class="token punctuation">)</span>  
-</code></pre><h2 id="maxwell分布下电子相空间演化">Maxwell分布下电子相空间演化 </h2>
-<h3 id="涉及程序">涉及程序 </h3>
-<p>主要程序保存在文件夹 maxwell_particle_evolution中。<br>
+</code></pre><p>##Maxwell分布下电子相空间演化<br>
+###涉及程序<br>
+主要程序保存在文件夹 maxwell_particle_evolution中。<br>
 fortran程序：pic1d_diy_2_full_more_explain.f90<br>
 python绘制粒子云图程序：py_readparticle_many_picture.py<br>
 python动图绘制程序：py_imageio_combine2gif.py</p>
-<h3 id="参数和初始条件设置">参数和初始条件设置 </h3>
-<p>设置两种粒子：电子和离子。之后用k表示粒子种类，其中k=1是电子，k=2是离子。参数如下：</p>
+<p>###参数和初始条件设置<br>
+设置两种粒子：电子和离子。之后用k表示粒子种类，其中k=1是电子，k=2是离子。参数如下：</p>
 <pre data-role="codeBlock" data-info="fortran" class="language-fortran fortran"><code>    <span class="token keyword keyword-real">real</span><span class="token punctuation">,</span><span class="token keyword keyword-dimension">dimension</span><span class="token punctuation">(</span>nspecie<span class="token punctuation">)</span> <span class="token operator">::</span>  qspecie<span class="token punctuation">,</span>aspecie<span class="token punctuation">,</span>tspecie
     <span class="token keyword keyword-data">data</span> qspecie<span class="token operator">/</span><span class="token operator">-</span><span class="token number">1.0</span><span class="token punctuation">,</span><span class="token number">1.</span><span class="token operator">/</span>         <span class="token comment">!charge</span>
     <span class="token keyword keyword-data">data</span> aspecie<span class="token operator">/</span><span class="token number">1.0</span><span class="token punctuation">,</span><span class="token number">100.</span><span class="token operator">/</span>          <span class="token comment">!mass</span>
     <span class="token keyword keyword-data">data</span> tspecie<span class="token operator">/</span><span class="token number">1.0</span><span class="token punctuation">,</span><span class="token number">1.</span><span class="token operator">/</span>          <span class="token comment">!temperature</span>
 </code></pre><p>采用full_f和非线性模拟。初始粒子速度在load子程序中设置，默认设为Maxwell分布。<br>
-模拟主要调节参数：模拟每种粒子数量nparticle,模拟时间步进次数ntime,诊断频率(每隔多少时间步长诊断一次)ndiag.对于<code>nparticle=60000,ntime=5000,ndiag=20</code>情况，绘制动图如下。<br>
-<img src="scatter_animation_nparticle_60000_ntime_5000_ndiag_20-1.gif" alt="alt text"><br>
-初始时刻图如下。对比可见，此情况下演化，相空间变化不大。这是对平衡情况验证。<br>
-<img src="scatter_plot_idiag_1-1.png" alt="Alt text"></p>
+模拟主要调节参数：模拟每种粒子数量nparticle,模拟时间步进次数ntime,诊断频率(每隔多少时间步长诊断一次)ndiag.对于<code>nparticle=60000,ntime=5000,ndiag=20</code>情况，绘制动图如下。</p>
+<p>初始时刻图如下。对比可见，此情况下演化，相空间变化不大。这是对平衡情况验证。<br>
+<img src="./refphoto/scatter_plot_idiag_1-1.png" alt="scatter_plot_idiag_1-1"></p>
 <h2 id="双流初始条件下的演化">双流初始条件下的演化 </h2>
 <h3 id="初始速度的设置">初始速度的设置 </h3>
 <p>首先我们在parameter中声明了我们的粒子数量，离子和电子均为<code>nparticle=60000</code>。然后我们设置<code>nbeam</code>为双束流电子总数。</p>
@@ -177,10 +176,12 @@ python动图绘制程序：py_imageio_combine2gif.py</p>
         <span class="token keyword keyword-endif">endif</span>
 </code></pre><p>之后速度还会按温度和质量归一化. <code>v(:,k)=v(:,k)*sqrt(tspecie(k)/aspecie(k))</code></p>
 <h3 id="结果">结果 </h3>
-<p><img src="scatter_animation_nparticle_60000_ntime_5000_ndiag_100.gif" alt="Alt text"></p>
-<p><img src="scatter_twostream_animation_nparticle_60000_ntime_5000_ndiag_100-1.gif" alt="Alt text"><br>
-放的慢一些：<br>
-<img src="scatter_animation_nparticle_60000_ntime_3000_ndiag_10.gif" alt="Alt text"></p>
+<p><img src="./refphoto/bluetwostreaminstability_animation_nparticle_60000_ntime_5000_ndiag_100.gif" alt="bluetwostreaminstability_animation_nparticle_60000_ntime_5000_ndiag_100"></p>
+<p><img src="./refphoto/dcolortwostream_animation_nparticle_60000_ntime_5000_ndiag_100.gif" alt="dcolortwostream_animation_nparticle_60000_ntime_5000_ndiag_100"><br>
+放的慢一些：</p>
+<p><img src="./refphoto/dcolorslow_animation_nparticle_60000_ntime_3000_ndiag_10.gif" alt="dcolorslow_animation_nparticle_60000_ntime_3000_ndiag_10"></p>
+<p>正在增长的本征模：<br>
+<img src="./refphoto/eigenmode.png" alt="eigenmode"></p>
 <h3 id="场的计算和滤波">场的计算和滤波 </h3>
 <p><code>filed</code>子程序首先是计算各个粒子对空间网格电量的贡献，将电荷分布（密度）保存在<code>charge</code>一维数组中。接着对<code>charge</code>数组做<code>r2cfft</code>得到<code>charge_k</code>数组，此时电势泊松方程化为代数方程，这里通过<code>filter</code>滤波只保留我们感兴趣的模数:</p>
 <pre data-role="codeBlock" data-info="fortran" class="language-fortran fortran"><code><span class="token comment">! mode filtering: k=0,1,...,ngrid/2</span>
