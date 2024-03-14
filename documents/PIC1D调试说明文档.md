@@ -17,6 +17,62 @@
 ![mainprogramprocess](./refphoto/mainprogramprocess.jpg)
 主程序流程图。需要注意的是，与原始程序相比，流程图做了细微的调整：field和particle子程序接受参数nrk输入，相当于在particle子程序末添加一段周期性边界条件处理程序。
 
+
+
+## 模拟参数
+### 归一化方法
+在程序开头注释了：
+```fortran
+!* Modules for program PIC1D, Unmagnetized plasma use electron unit: n,m,e,T=1     *
+!* Basic unit: Debye length sqrt(T/ne^2)=1, plasma frequency sqrt(ne^2/m)=1        *
+```
+在这样的单位制（归一化方法）下，粒子数密度n，电子质量m，电子电量e，温度T，德拜长度，等离子体频率，都是1.这样，时间、空间、质量、电量、温度，都有了独立的单位。
+真空介电常数也是1，这样等离子体频率才自洽，德拜长度也才自洽。这里也把玻耳兹曼常量k当成1了，所以温度就是能量量纲。要求n=1，这样才能保证时空尺度单位是1。
+
+```fortran
+!parameter 模块中
+integer,parameter :: ngrid=64   !格点数
+real :: deltax=0.245437     !网格长
+integer,parameter :: ntime=5000,ndiag=100 !时间步数ntime,诊断间隔ndiag
+real :: tstep=0.1          ! time step size 时间步长
+
+real,dimension(nspecie) ::  qspecie,aspecie,tspecie
+    data qspecie/-1.0,1./         !charge
+    data aspecie/1.0,100./          !mass
+    data tspecie/1.0,1./          !temperature
+
+real,dimension(0:ngrid) :: charge,phi,efield
+! charge density, potential, electric field，这三个数组的指标是从0开始的
+
+!load子程序中
+xsize=real(ngrid)*deltax    !设置系统尺度L=xsize=格点数*网格长。对于上面设的情况,L=5pi
+
+x_inv=1.0/xsize     !1/L
+xfreq=2.0*pi*x_inv     !空间基频2pi/L
+dx_inv=1.0/deltax   !1/dx
+```
+
+#### 粒子数归一化
+实际中，我们的粒子有“代表点”的意思。在涉及每个电子的电量和质量时，都要小心归一化问题。
+
+```fortran
+!nparticle在计算电量中
+tempcharge(j)=tempcharge(j)+delj*w(i,k)*qspecie(k)  !根据插值系数 delj 更新私有数组 tempcharge 中对应的网格点 j 的电荷量
+tempcharge(j-1)=tempcharge(j-1)+(1.0-delj)*w(i,k)*qspecie(k)
+!...退出循环，此时charge和nparticle有关（近似正比）
+!归一化，这样每个粒子携带ngrid/nparticle个电荷；具体来说，是ngrid/nparticle*w(i,k)*qspecie(k)
+charge=charge*real(ngrid)/real(nparticle)   
+```
+
+
+### 周期边条件处理
+程序中很多地方用到了周期性边条件。做法是，先把坐标除以L，加上足够大的正整数，取小数，再乘以L.这样得到的xpart保证在0-L范围内。
+```fortran
+! periodic BC
+xpart=x(i,k)*x_inv+10.0
+xpart=xsize*(xpart-aint(xpart))
+```
+
 ## 诊断与粒子云图绘制
 在原程序中，诊断过程在field子程序中进行，history将诊断变量输出。现在，我们可以不适用原始的history子程序；针对我们感兴趣的粒子云图，我们可以自己写诊断方案，将粒子信息保存在文本文件中，然后利用第三方软件（如python）进行粒子云图绘制。
 ![粒子云诊断步骤](./refphoto/粒子云诊断步骤.png)
@@ -73,14 +129,14 @@ with imageio.get_writer(os.path.join(os.getcwd(), 'scatter_animation_nparticle_{
         image = imageio.imread(path)  
         writer.append_data(image)  
 ```
-##Maxwell分布下电子相空间演化
-###涉及程序
+## Maxwell分布下电子相空间演化
+### 涉及程序
 主要程序保存在文件夹 maxwell_particle_evolution中。
 fortran程序：pic1d_diy_2_full_more_explain.f90 
 python绘制粒子云图程序：py_readparticle_many_picture.py
 python动图绘制程序：py_imageio_combine2gif.py
 
-###参数和初始条件设置
+### 参数和初始条件设置
 设置两种粒子：电子和离子。之后用k表示粒子种类，其中k=1是电子，k=2是离子。参数如下：
 ```fortran
     real,dimension(nspecie) ::  qspecie,aspecie,tspecie

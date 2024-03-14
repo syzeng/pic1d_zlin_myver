@@ -143,6 +143,7 @@
     call random_seed(put=iput)
 
     ! load particles
+    ! 每个粒子的速度信息保存在二维数组v里，`v(i,k)`表示第k种第i个粒子的速度。子程序`load`中，源代码在`imarker==1`时进行速度的麦克斯韦分布：
     do k=1,nspecie
 
         call random_number(v(:,k))
@@ -282,10 +283,10 @@
             xpart=xsize*(xpart-aint(xpart))
 
             ! particle to grid charge scattering
-            j=int(xpart*dx_inv)
-            delj=xpart*dx_inv-j
-            j=max(1,min(ngrid,j+1))
-            tempcharge(j)=tempcharge(j)+delj*w(i,k)*qspecie(k)
+            j=int(xpart*dx_inv) !坐标除以网格长取整，得到粒子所在位置左侧的网格指标
+            delj=xpart*dx_inv-j !插值系数=指标剩余，这个居然是分到j的
+            j=max(1,min(ngrid,j+1)) !j=j+1.确保网格索引 j 在有效的范围内（从 1 到 ngrid），防止因浮点运算误差导致越界。
+            tempcharge(j)=tempcharge(j)+delj*w(i,k)*qspecie(k)  !根据插值系数 delj 更新私有数组 tempcharge 中对应的网格点 j 的电荷量，其中 w(i,k) 可能代表第 i 个粒子在第 k 个物种中的权重因子，而 qspecie(k) 是第 k 个物种的单位电荷。
             tempcharge(j-1)=tempcharge(j-1)+(1.0-delj)*w(i,k)*qspecie(k)
         enddo
         !$omp end do
@@ -300,7 +301,7 @@
     enddo
     charge(ngrid)=charge(ngrid)+charge(0)     !boundary grid
     charge(0)=charge(ngrid)                     !periodic BC
-    charge=charge*real(ngrid)/real(nparticle)
+    charge=charge*real(ngrid)/real(nparticle)   !对粒子数归一化
 
     ! Fourier transform of charge density
     call r2cfft(ngrid,charge(0:ngrid-1),charge_k)
