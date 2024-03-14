@@ -47,7 +47,7 @@
     ! charge density, potential, electric field
 
     ! time array: # of time steps, interval of steps, modes for diagnostics
-    integer,parameter :: ntime=5000,ndiag=100,nmode=2
+    integer,parameter :: ntime=500,ndiag=10,nmode=2
     integer,parameter :: nd=(ntime-1)/ndiag+1
     integer mode(nmode),nt
     data mode/1,2/             ! mode # for diagnostics
@@ -265,6 +265,7 @@
 
     ! mode filtering: k=0,1,...,ngrid/2
     filter=0.0
+    filter=1.0 !全通
     !  filter(2:ngrid/8)=1.0
     filter(2)=1.0		! filter out all modes except k=2*pi/xsize
 

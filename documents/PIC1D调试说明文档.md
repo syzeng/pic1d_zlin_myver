@@ -52,8 +52,8 @@ xfreq=2.0*pi*x_inv     !空间基频2pi/L
 dx_inv=1.0/deltax   !1/dx
 ```
 
-#### 粒子数归一化
-实际中，我们的粒子有“代表点”的意思。在涉及每个电子的电量和质量时，都要小心归一化问题。
+### 粒子数归一化
+实际中，我们的粒子有“代表点”的意思。在涉及每个电子的电量和质量时，都要小心归一化问题。例如，下面是将粒子云电量加权到网格的部分程序：
 
 ```fortran
 !nparticle在计算电量中
@@ -62,6 +62,31 @@ tempcharge(j-1)=tempcharge(j-1)+(1.0-delj)*w(i,k)*qspecie(k)
 !...退出循环，此时charge和nparticle有关（近似正比）
 !归一化，这样每个粒子携带ngrid/nparticle个电荷；具体来说，是ngrid/nparticle*w(i,k)*qspecie(k)
 charge=charge*real(ngrid)/real(nparticle)   
+```
+在计算粒子运动状态变化时，我们并没有考虑nparticle带来什么贡献。我的解释是，粒子被“均分”了，荷质比不变。
+
+### 诊断参量
+在诊断的时候，对nparticle的处理也很多。
+首先我们对粒子求和得到各诊断参量，然后将其除以nparticle得到归一化诊断参量。诊断参量累加代码：
+```fortran
+!$omp do private(i)
+do i=1, nparticle
+    densitytemp= densitytemp + w(i,k)
+    entropytemp= entropytemp + w(i,k)*w(i,k)
+    flowtemp=    flowtemp	 + w(i,k)*v(i,k)
+    kin_enetemp= kin_enetemp + w(i,k)*v(i,k)*v(i,k)
+    flow_martemp=flow_martemp+ p0(i,k)*v(i,k)
+    kin_martemp= kin_martemp + p0(i,k)*v(i,k)*v(i,k)
+enddo
+```
+总扰动能量使用如下方式计算，并输出在PIC1D.out里：
+```fortran
+! field diagnostic: field energy and potential RMS, mode amplitudes
+field_ene(ndt)=0.5*sum(phi(1:ngrid)*charge(1:ngrid))/real(ngrid)
+
+! total perturbed energy
+field_ene(ndt)=field_ene(ndt)+sum(kin_ene(ndt,:))-(1.0-deltaf)*sum(kin_ene(1,:))
+write(stdout,*)'ntime=',nt,' total energy=',field_ene(ndt)
 ```
 
 
