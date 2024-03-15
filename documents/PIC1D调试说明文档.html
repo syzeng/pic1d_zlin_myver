@@ -3,7 +3,7 @@
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
       
-      <link rel="stylesheet" href="file:///c:\Users\user\.vscode\extensions\shd101wyy.markdown-preview-enhanced-0.8.12\crossnote\dependencies\katex\katex.min.css">
+      <link rel="stylesheet" href="file:///c:\Users\Administrator\.vscode\extensions\shd101wyy.markdown-preview-enhanced-0.8.12\crossnote\dependencies\katex\katex.min.css">
       
       
       
@@ -56,7 +56,67 @@
 </ol>
 <p><img src="./refphoto/mainprogramprocess.jpg" alt="mainprogramprocess"><br>
 主程序流程图。需要注意的是，与原始程序相比，流程图做了细微的调整：field和particle子程序接受参数nrk输入，相当于在particle子程序末添加一段周期性边界条件处理程序。</p>
-<h2 id="诊断与粒子云图绘制">诊断与粒子云图绘制 </h2>
+<h2 id="模拟参数">模拟参数 </h2>
+<h3 id="归一化方法">归一化方法 </h3>
+<p>在程序开头注释了：</p>
+<pre data-role="codeBlock" data-info="fortran" class="language-fortran fortran"><code><span class="token comment">!* Modules for program PIC1D, Unmagnetized plasma use electron unit: n,m,e,T=1     *</span>
+<span class="token comment">!* Basic unit: Debye length sqrt(T/ne^2)=1, plasma frequency sqrt(ne^2/m)=1        *</span>
+</code></pre><p>在这样的单位制（归一化方法）下，粒子数密度n，电子质量m，电子电量e，温度T，德拜长度，等离子体频率，都是1.这样，时间、空间、质量、电量、温度，都有了独立的单位。<br>
+真空介电常数也是1，这样等离子体频率才自洽，德拜长度也才自洽。这里也把玻耳兹曼常量k当成1了，所以温度就是能量量纲。要求n=1，这样才能保证时空尺度单位是1。</p>
+<pre data-role="codeBlock" data-info="fortran" class="language-fortran fortran"><code><span class="token comment">!parameter 模块中</span>
+<span class="token keyword keyword-integer">integer</span><span class="token punctuation">,</span><span class="token keyword keyword-parameter">parameter</span> <span class="token operator">::</span> ngrid<span class="token operator">=</span><span class="token number">64</span>   <span class="token comment">!格点数</span>
+<span class="token keyword keyword-real">real</span> <span class="token operator">::</span> deltax<span class="token operator">=</span><span class="token number">0.245437</span>     <span class="token comment">!网格长</span>
+<span class="token keyword keyword-integer">integer</span><span class="token punctuation">,</span><span class="token keyword keyword-parameter">parameter</span> <span class="token operator">::</span> ntime<span class="token operator">=</span><span class="token number">5000</span><span class="token punctuation">,</span>ndiag<span class="token operator">=</span><span class="token number">100</span> <span class="token comment">!时间步数ntime,诊断间隔ndiag</span>
+<span class="token keyword keyword-real">real</span> <span class="token operator">::</span> tstep<span class="token operator">=</span><span class="token number">0.1</span>          <span class="token comment">! time step size 时间步长</span>
+
+<span class="token keyword keyword-real">real</span><span class="token punctuation">,</span><span class="token keyword keyword-dimension">dimension</span><span class="token punctuation">(</span>nspecie<span class="token punctuation">)</span> <span class="token operator">::</span>  qspecie<span class="token punctuation">,</span>aspecie<span class="token punctuation">,</span>tspecie
+    <span class="token keyword keyword-data">data</span> qspecie<span class="token operator">/</span><span class="token operator">-</span><span class="token number">1.0</span><span class="token punctuation">,</span><span class="token number">1.</span><span class="token operator">/</span>         <span class="token comment">!charge</span>
+    <span class="token keyword keyword-data">data</span> aspecie<span class="token operator">/</span><span class="token number">1.0</span><span class="token punctuation">,</span><span class="token number">100.</span><span class="token operator">/</span>          <span class="token comment">!mass</span>
+    <span class="token keyword keyword-data">data</span> tspecie<span class="token operator">/</span><span class="token number">1.0</span><span class="token punctuation">,</span><span class="token number">1.</span><span class="token operator">/</span>          <span class="token comment">!temperature</span>
+
+<span class="token keyword keyword-real">real</span><span class="token punctuation">,</span><span class="token keyword keyword-dimension">dimension</span><span class="token punctuation">(</span><span class="token number">0</span><span class="token punctuation">:</span>ngrid<span class="token punctuation">)</span> <span class="token operator">::</span> charge<span class="token punctuation">,</span>phi<span class="token punctuation">,</span>efield
+<span class="token comment">! charge density, potential, electric field，这三个数组的指标是从0开始的</span>
+
+<span class="token comment">!load子程序中</span>
+xsize<span class="token operator">=</span><span class="token keyword keyword-real">real</span><span class="token punctuation">(</span>ngrid<span class="token punctuation">)</span><span class="token operator">*</span>deltax    <span class="token comment">!设置系统尺度L=xsize=格点数*网格长。对于上面设的情况,L=5pi</span>
+
+x_inv<span class="token operator">=</span><span class="token number">1.0</span><span class="token operator">/</span>xsize     <span class="token comment">!1/L</span>
+xfreq<span class="token operator">=</span><span class="token number">2.0</span><span class="token operator">*</span>pi<span class="token operator">*</span>x_inv     <span class="token comment">!空间基频2pi/L</span>
+dx_inv<span class="token operator">=</span><span class="token number">1.0</span><span class="token operator">/</span>deltax   <span class="token comment">!1/dx</span>
+</code></pre><h3 id="粒子数归一化">粒子数归一化 </h3>
+<p>实际中，我们的粒子有“代表点”的意思。在涉及每个电子的电量和质量时，都要小心归一化问题。例如，下面是将粒子云电量加权到网格的部分程序：</p>
+<pre data-role="codeBlock" data-info="fortran" class="language-fortran fortran"><code><span class="token comment">!nparticle在计算电量中</span>
+tempcharge<span class="token punctuation">(</span>j<span class="token punctuation">)</span><span class="token operator">=</span>tempcharge<span class="token punctuation">(</span>j<span class="token punctuation">)</span><span class="token operator">+</span>delj<span class="token operator">*</span>w<span class="token punctuation">(</span>i<span class="token punctuation">,</span>k<span class="token punctuation">)</span><span class="token operator">*</span>qspecie<span class="token punctuation">(</span>k<span class="token punctuation">)</span>  <span class="token comment">!根据插值系数 delj 更新私有数组 tempcharge 中对应的网格点 j 的电荷量</span>
+tempcharge<span class="token punctuation">(</span>j<span class="token operator">-</span><span class="token number">1</span><span class="token punctuation">)</span><span class="token operator">=</span>tempcharge<span class="token punctuation">(</span>j<span class="token operator">-</span><span class="token number">1</span><span class="token punctuation">)</span><span class="token operator">+</span><span class="token punctuation">(</span><span class="token number">1.0</span><span class="token operator">-</span>delj<span class="token punctuation">)</span><span class="token operator">*</span>w<span class="token punctuation">(</span>i<span class="token punctuation">,</span>k<span class="token punctuation">)</span><span class="token operator">*</span>qspecie<span class="token punctuation">(</span>k<span class="token punctuation">)</span>
+<span class="token comment">!...退出循环，此时charge和nparticle有关（近似正比）</span>
+<span class="token comment">!归一化，这样每个粒子携带ngrid/nparticle个电荷；具体来说，是ngrid/nparticle*w(i,k)*qspecie(k)</span>
+charge<span class="token operator">=</span>charge<span class="token operator">*</span><span class="token keyword keyword-real">real</span><span class="token punctuation">(</span>ngrid<span class="token punctuation">)</span><span class="token operator">/</span><span class="token keyword keyword-real">real</span><span class="token punctuation">(</span>nparticle<span class="token punctuation">)</span>   
+</code></pre><p>在计算粒子运动状态变化时，我们并没有考虑nparticle带来什么贡献。我的解释是，粒子被“均分”了，荷质比不变。</p>
+<h3 id="诊断参量">诊断参量 </h3>
+<p>在诊断的时候，对nparticle的处理也很多。<br>
+首先我们对粒子求和得到各诊断参量，然后将其除以nparticle得到归一化诊断参量。诊断参量累加代码：</p>
+<pre data-role="codeBlock" data-info="fortran" class="language-fortran fortran"><code><span class="token comment">!$omp do private(i)</span>
+<span class="token keyword keyword-do">do</span> i<span class="token operator">=</span><span class="token number">1</span><span class="token punctuation">,</span> nparticle
+    densitytemp<span class="token operator">=</span> densitytemp <span class="token operator">+</span> w<span class="token punctuation">(</span>i<span class="token punctuation">,</span>k<span class="token punctuation">)</span>
+    entropytemp<span class="token operator">=</span> entropytemp <span class="token operator">+</span> w<span class="token punctuation">(</span>i<span class="token punctuation">,</span>k<span class="token punctuation">)</span><span class="token operator">*</span>w<span class="token punctuation">(</span>i<span class="token punctuation">,</span>k<span class="token punctuation">)</span>
+    flowtemp<span class="token operator">=</span>    flowtemp	 <span class="token operator">+</span> w<span class="token punctuation">(</span>i<span class="token punctuation">,</span>k<span class="token punctuation">)</span><span class="token operator">*</span>v<span class="token punctuation">(</span>i<span class="token punctuation">,</span>k<span class="token punctuation">)</span>
+    kin_enetemp<span class="token operator">=</span> kin_enetemp <span class="token operator">+</span> w<span class="token punctuation">(</span>i<span class="token punctuation">,</span>k<span class="token punctuation">)</span><span class="token operator">*</span>v<span class="token punctuation">(</span>i<span class="token punctuation">,</span>k<span class="token punctuation">)</span><span class="token operator">*</span>v<span class="token punctuation">(</span>i<span class="token punctuation">,</span>k<span class="token punctuation">)</span>
+    flow_martemp<span class="token operator">=</span>flow_martemp<span class="token operator">+</span> p0<span class="token punctuation">(</span>i<span class="token punctuation">,</span>k<span class="token punctuation">)</span><span class="token operator">*</span>v<span class="token punctuation">(</span>i<span class="token punctuation">,</span>k<span class="token punctuation">)</span>
+    kin_martemp<span class="token operator">=</span> kin_martemp <span class="token operator">+</span> p0<span class="token punctuation">(</span>i<span class="token punctuation">,</span>k<span class="token punctuation">)</span><span class="token operator">*</span>v<span class="token punctuation">(</span>i<span class="token punctuation">,</span>k<span class="token punctuation">)</span><span class="token operator">*</span>v<span class="token punctuation">(</span>i<span class="token punctuation">,</span>k<span class="token punctuation">)</span>
+<span class="token keyword keyword-enddo">enddo</span>
+</code></pre><p>总扰动能量使用如下方式计算，并输出在PIC1D.out里：</p>
+<pre data-role="codeBlock" data-info="fortran" class="language-fortran fortran"><code><span class="token comment">! field diagnostic: field energy and potential RMS, mode amplitudes</span>
+field_ene<span class="token punctuation">(</span>ndt<span class="token punctuation">)</span><span class="token operator">=</span><span class="token number">0.5</span><span class="token operator">*</span>sum<span class="token punctuation">(</span>phi<span class="token punctuation">(</span><span class="token number">1</span><span class="token punctuation">:</span>ngrid<span class="token punctuation">)</span><span class="token operator">*</span>charge<span class="token punctuation">(</span><span class="token number">1</span><span class="token punctuation">:</span>ngrid<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token operator">/</span><span class="token keyword keyword-real">real</span><span class="token punctuation">(</span>ngrid<span class="token punctuation">)</span>
+
+<span class="token comment">! total perturbed energy</span>
+field_ene<span class="token punctuation">(</span>ndt<span class="token punctuation">)</span><span class="token operator">=</span>field_ene<span class="token punctuation">(</span>ndt<span class="token punctuation">)</span><span class="token operator">+</span>sum<span class="token punctuation">(</span>kin_ene<span class="token punctuation">(</span>ndt<span class="token punctuation">,</span><span class="token punctuation">:</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token operator">-</span><span class="token punctuation">(</span><span class="token number">1.0</span><span class="token operator">-</span>deltaf<span class="token punctuation">)</span><span class="token operator">*</span>sum<span class="token punctuation">(</span>kin_ene<span class="token punctuation">(</span><span class="token number">1</span><span class="token punctuation">,</span><span class="token punctuation">:</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+<span class="token keyword keyword-write">write</span><span class="token punctuation">(</span>stdout<span class="token punctuation">,</span><span class="token operator">*</span><span class="token punctuation">)</span><span class="token string">'ntime='</span><span class="token punctuation">,</span>nt<span class="token punctuation">,</span><span class="token string">' total energy='</span><span class="token punctuation">,</span>field_ene<span class="token punctuation">(</span>ndt<span class="token punctuation">)</span>
+</code></pre><h3 id="周期边条件处理">周期边条件处理 </h3>
+<p>程序中很多地方用到了周期性边条件。做法是，先把坐标除以L，加上足够大的正整数，取小数，再乘以L.这样得到的xpart保证在0-L范围内。</p>
+<pre data-role="codeBlock" data-info="fortran" class="language-fortran fortran"><code><span class="token comment">! periodic BC</span>
+xpart<span class="token operator">=</span>x<span class="token punctuation">(</span>i<span class="token punctuation">,</span>k<span class="token punctuation">)</span><span class="token operator">*</span>x_inv<span class="token operator">+</span><span class="token number">10.0</span>
+xpart<span class="token operator">=</span>xsize<span class="token operator">*</span><span class="token punctuation">(</span>xpart<span class="token operator">-</span>aint<span class="token punctuation">(</span>xpart<span class="token punctuation">)</span><span class="token punctuation">)</span>
+</code></pre><h2 id="诊断与粒子云图绘制">诊断与粒子云图绘制 </h2>
 <p>在原程序中，诊断过程在field子程序中进行，history将诊断变量输出。现在，我们可以不适用原始的history子程序；针对我们感兴趣的粒子云图，我们可以自己写诊断方案，将粒子信息保存在文本文件中，然后利用第三方软件（如python）进行粒子云图绘制。<br>
 <img src="./refphoto/%E7%B2%92%E5%AD%90%E4%BA%91%E8%AF%8A%E6%96%AD%E6%AD%A5%E9%AA%A4.png" alt="粒子云诊断步骤"></p>
 <p>在field子程序中，每次诊断，我们记录每个电子的x，v信息：</p>
@@ -104,21 +164,22 @@ image_paths<span class="token punctuation">.</span>sort<span class="token punctu
     <span class="token keyword keyword-for">for</span> path <span class="token keyword keyword-in">in</span> image_paths<span class="token punctuation">:</span>  
         image <span class="token operator">=</span> imageio<span class="token punctuation">.</span>imread<span class="token punctuation">(</span>path<span class="token punctuation">)</span>  
         writer<span class="token punctuation">.</span>append_data<span class="token punctuation">(</span>image<span class="token punctuation">)</span>  
-</code></pre><p>##Maxwell分布下电子相空间演化<br>
-###涉及程序<br>
-主要程序保存在文件夹 maxwell_particle_evolution中。<br>
+</code></pre><h2 id="maxwell分布下电子相空间演化">Maxwell分布下电子相空间演化 </h2>
+<h3 id="涉及程序">涉及程序 </h3>
+<p>主要程序保存在文件夹 maxwell_particle_evolution中。<br>
 fortran程序：pic1d_diy_2_full_more_explain.f90<br>
 python绘制粒子云图程序：py_readparticle_many_picture.py<br>
 python动图绘制程序：py_imageio_combine2gif.py</p>
-<p>###参数和初始条件设置<br>
-设置两种粒子：电子和离子。之后用k表示粒子种类，其中k=1是电子，k=2是离子。参数如下：</p>
+<h3 id="参数和初始条件设置">参数和初始条件设置 </h3>
+<p>设置两种粒子：电子和离子。之后用k表示粒子种类，其中k=1是电子，k=2是离子。参数如下：</p>
 <pre data-role="codeBlock" data-info="fortran" class="language-fortran fortran"><code>    <span class="token keyword keyword-real">real</span><span class="token punctuation">,</span><span class="token keyword keyword-dimension">dimension</span><span class="token punctuation">(</span>nspecie<span class="token punctuation">)</span> <span class="token operator">::</span>  qspecie<span class="token punctuation">,</span>aspecie<span class="token punctuation">,</span>tspecie
     <span class="token keyword keyword-data">data</span> qspecie<span class="token operator">/</span><span class="token operator">-</span><span class="token number">1.0</span><span class="token punctuation">,</span><span class="token number">1.</span><span class="token operator">/</span>         <span class="token comment">!charge</span>
     <span class="token keyword keyword-data">data</span> aspecie<span class="token operator">/</span><span class="token number">1.0</span><span class="token punctuation">,</span><span class="token number">100.</span><span class="token operator">/</span>          <span class="token comment">!mass</span>
     <span class="token keyword keyword-data">data</span> tspecie<span class="token operator">/</span><span class="token number">1.0</span><span class="token punctuation">,</span><span class="token number">1.</span><span class="token operator">/</span>          <span class="token comment">!temperature</span>
 </code></pre><p>采用full_f和非线性模拟。初始粒子速度在load子程序中设置，默认设为Maxwell分布。<br>
-模拟主要调节参数：模拟每种粒子数量nparticle,模拟时间步进次数ntime,诊断频率(每隔多少时间步长诊断一次)ndiag.对于<code>nparticle=60000,ntime=5000,ndiag=20</code>情况，绘制动图如下。</p>
-<p>初始时刻图如下。对比可见，此情况下演化，相空间变化不大。这是对平衡情况验证。<br>
+模拟主要调节参数：模拟每种粒子数量nparticle,模拟时间步进次数ntime,诊断频率(每隔多少时间步长诊断一次)ndiag.对于<code>nparticle=60000,ntime=5000,ndiag=20</code>情况，绘制动图如下。<br>
+<img src="./refphoto/scatter_animation_nparticle_60000_ntime_5000_ndiag_20-1.gif" alt="1"><br>
+初始时刻图如下。对比可见，此情况下演化，相空间变化不大。这是对平衡情况验证。<br>
 <img src="./refphoto/scatter_plot_idiag_1-1.png" alt="scatter_plot_idiag_1-1"></p>
 <h2 id="双流初始条件下的演化">双流初始条件下的演化 </h2>
 <h3 id="初始速度的设置">初始速度的设置 </h3>
@@ -182,18 +243,21 @@ python动图绘制程序：py_imageio_combine2gif.py</p>
 <p><img src="./refphoto/dcolorslow_animation_nparticle_60000_ntime_3000_ndiag_10.gif" alt="dcolorslow_animation_nparticle_60000_ntime_3000_ndiag_10"></p>
 <p>正在增长的本征模：<br>
 <img src="./refphoto/eigenmode.png" alt="eigenmode"></p>
+<p><img src="./refphoto/filter2_401.png" alt="eigenmode"></p>
 <h3 id="场的计算和滤波">场的计算和滤波 </h3>
 <p><code>filed</code>子程序首先是计算各个粒子对空间网格电量的贡献，将电荷分布（密度）保存在<code>charge</code>一维数组中。接着对<code>charge</code>数组做<code>r2cfft</code>得到<code>charge_k</code>数组，此时电势泊松方程化为代数方程，这里通过<code>filter</code>滤波只保留我们感兴趣的模数:</p>
 <pre data-role="codeBlock" data-info="fortran" class="language-fortran fortran"><code><span class="token comment">! mode filtering: k=0,1,...,ngrid/2</span>
     filter<span class="token operator">=</span><span class="token number">0.0</span>
     filter<span class="token punctuation">(</span><span class="token number">2</span><span class="token punctuation">:</span>ngrid<span class="token operator">/</span><span class="token number">8</span><span class="token punctuation">)</span><span class="token operator">=</span><span class="token number">1.0</span>   <span class="token comment">!保留部分modes</span>
-    filter<span class="token punctuation">(</span><span class="token number">2</span><span class="token punctuation">)</span><span class="token operator">=</span><span class="token number">1.0</span>		<span class="token comment">! filter out all modes except k=2*pi/xsize，只保留基频</span>
+    <span class="token comment">!filter(2)=1.0		! filter out all modes except k=2*pi/xsize，只保留基频</span>
 <span class="token comment">! Poisson equation for potential, grad^2_phi=-charge, k*k*phi_k=charge_k</span>
     phi_k<span class="token punctuation">(</span><span class="token number">1</span><span class="token punctuation">)</span><span class="token operator">=</span><span class="token number">0.0</span>
     <span class="token keyword keyword-do">do</span> k<span class="token operator">=</span><span class="token number">1</span><span class="token punctuation">,</span>ngrid<span class="token operator">/</span><span class="token number">2</span>
         phi_k<span class="token punctuation">(</span>k<span class="token operator">+</span><span class="token number">1</span><span class="token punctuation">)</span><span class="token operator">=</span>filter<span class="token punctuation">(</span>k<span class="token operator">+</span><span class="token number">1</span><span class="token punctuation">)</span><span class="token operator">*</span>charge_k<span class="token punctuation">(</span>k<span class="token operator">+</span><span class="token number">1</span><span class="token punctuation">)</span><span class="token operator">/</span><span class="token punctuation">(</span>xfreq<span class="token operator">*</span><span class="token keyword keyword-real">real</span><span class="token punctuation">(</span>k<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token operator">**</span><span class="token number">2</span>
     <span class="token keyword keyword-enddo">enddo</span>
-</code></pre><h3 id="模数行为的保存phi_mode">模数行为的保存：phi_mode </h3>
+</code></pre><p><img src="./refphoto/filter2-8_nparticle_60000_ntime_2000_ndiag_20.gif" alt="dcolorslow_animation_nparticle_60000_ntime_3000_ndiag_10"></p>
+<p><img src="./refphoto/filter2-8_401.png" alt="dcolorslow_animation_nparticle_60000_ntime_3000_ndiag_10"></p>
+<h3 id="模数行为的保存phi_mode">模数行为的保存：phi_mode </h3>
 <p>phi_mode保存了不同时刻的phi_k，本质上是电势展开成傅里叶级数后级数的系数。</p>
 <pre data-role="codeBlock" data-info="" class="language-text text"><code>do j=1,nmode
             phi_mode(ndt,1,mode(j))=real(phi_k(mode(j)+1))

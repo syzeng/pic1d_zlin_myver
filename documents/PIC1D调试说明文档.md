@@ -28,6 +28,7 @@
 ```
 在这样的单位制（归一化方法）下，粒子数密度n，电子质量m，电子电量e，温度T，德拜长度，等离子体频率，都是1.这样，时间、空间、质量、电量、温度，都有了独立的单位。
 真空介电常数也是1，这样等离子体频率才自洽，德拜长度也才自洽。这里也把玻耳兹曼常量k当成1了，所以温度就是能量量纲。要求n=1，这样才能保证时空尺度单位是1。
+速度的单位是德拜长度乘以等离子体频率，也就是sqrt(T/m)，此温度下电子的热速度。
 
 ```fortran
 !parameter 模块中
@@ -171,7 +172,7 @@ python动图绘制程序：py_imageio_combine2gif.py
 ```
 采用full_f和非线性模拟。初始粒子速度在load子程序中设置，默认设为Maxwell分布。
 模拟主要调节参数：模拟每种粒子数量nparticle,模拟时间步进次数ntime,诊断频率(每隔多少时间步长诊断一次)ndiag.对于`nparticle=60000,ntime=5000,ndiag=20`情况，绘制动图如下。
-
+![1](./refphoto/scatter_animation_nparticle_60000_ntime_5000_ndiag_20-1.gif)
 初始时刻图如下。对比可见，此情况下演化，相空间变化不大。这是对平衡情况验证。
 ![scatter_plot_idiag_1-1](./refphoto/scatter_plot_idiag_1-1.png)
 
@@ -258,7 +259,9 @@ elseif(k==1)then
 正在增长的本征模：
 ![eigenmode](./refphoto/eigenmode.png)
 
-### 场的计算和滤波
+![eigenmode](./refphoto/filter2_401.png)
+
+### 场的计算和滤波:模数选取
 
 `filed`子程序首先是计算各个粒子对空间网格电量的贡献，将电荷分布（密度）保存在`charge`一维数组中。接着对`charge`数组做`r2cfft`得到`charge_k`数组，此时电势泊松方程化为代数方程，这里通过`filter`滤波只保留我们感兴趣的模数:
 
@@ -266,12 +269,36 @@ elseif(k==1)then
 ! mode filtering: k=0,1,...,ngrid/2
     filter=0.0
     filter(2:ngrid/8)=1.0   !保留部分modes
-    filter(2)=1.0		! filter out all modes except k=2*pi/xsize，只保留基频
+    !filter(2)=1.0		! filter out all modes except k=2*pi/xsize，只保留基频
 ! Poisson equation for potential, grad^2_phi=-charge, k*k*phi_k=charge_k
     phi_k(1)=0.0
     do k=1,ngrid/2
         phi_k(k+1)=filter(k+1)*charge_k(k+1)/(xfreq*real(k))**2
     enddo
+```
+
+![dcolorslow_animation_nparticle_60000_ntime_3000_ndiag_10](./refphoto/filter2-8_nparticle_60000_ntime_2000_ndiag_20.gif)
+
+![dcolorslow_animation_nparticle_60000_ntime_3000_ndiag_10](./refphoto/filter2-8_401.png)
+
+### 能量的演化
+前面提到，此程序在PIC1D.out中输出了总扰动能量的结果。现在，我们自己写一段，导出电场能量和总扰动能量。
+
+```fortran
+!首先在parameter区设置文件句柄
+integer :: parafile=114,field_E_file=514,totenergy_file=1919 
+
+!parafile 指代保存参数的文件
+!在主程序中
+open(field_E_file,file='Ef_energy.out',status='replace')
+open(totenergy_file,file='total_perturb_energy.out',status='replace')
+
+!在field子程序的诊断部分
+write(field_E_file,*)field_ene(ndt)
+! total perturbed energy
+field_ene(ndt)=field_ene(ndt)+sum(kin_ene(ndt,:))-(1.0-deltaf)*sum(kin_ene(1,:))
+write(stdout,*)'ntime=',nt,' total energy=',field_ene(ndt)
+write(totenergy_file,*)field_ene(ndt)
 ```
 
 ### 模数行为的保存：phi_mode

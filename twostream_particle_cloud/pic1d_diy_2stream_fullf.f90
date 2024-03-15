@@ -22,7 +22,7 @@
 
     ! control parameter
     integer :: stdout=1,imarker=1 !stdout=0: output to display; 1: to file "PIC1D.out"
-    integer :: parafile=114 !parafile 指代保存参数的文件
+    integer :: parafile=114,field_E_file=514,totenergy_file=1919 !parafile 指代保存参数的文件
     !1: load physical PDF; 0: uniform for [-vmax,vmax]
     real :: vmax=5.0  ,vbeam=1          !velocity space range [-vmax,vmax], f_m(v=5)=0.000003
     real :: linear=0.0         !1.0 for linear simulation; 0.0 for nonlinear.
@@ -47,7 +47,7 @@
     ! charge density, potential, electric field
 
     ! time array: # of time steps, interval of steps, modes for diagnostics
-    integer,parameter :: ntime=500,ndiag=10,nmode=2
+    integer,parameter :: ntime=2000,ndiag=20,nmode=2
     integer,parameter :: nd=(ntime-1)/ndiag+1
     integer mode(nmode),nt
     data mode/1,2/             ! mode # for diagnostics
@@ -76,6 +76,8 @@
     ! obtain starting CPU time
     call CPU_TIME(ctime0)
     if(stdout==1)open(stdout,file='PIC1D.out',status='replace')
+    open(field_E_file,file='Ef_energy.out',status='replace')
+    open(totenergy_file,file='total_perturb_energy.out',status='replace')
 
     !保存参数
     open(parafile,file='parameter_save.txt',status='replace')
@@ -265,8 +267,8 @@
 
     ! mode filtering: k=0,1,...,ngrid/2
     filter=0.0
-    filter=1.0 !全通
-    !  filter(2:ngrid/8)=1.0
+    !filter=1.0 !全通
+    filter(2:ngrid/8)=1.0
     filter(2)=1.0		! filter out all modes except k=2*pi/xsize
 
     charge=0.0
@@ -388,9 +390,12 @@
             kin_mar(ndt,k)= kin_mar(ndt,k)*0.5*aspecie(k)/real(nparticle)-0.5
         enddo
 
+        write(field_E_file,*)field_ene(ndt)
         ! total perturbed energy
         field_ene(ndt)=field_ene(ndt)+sum(kin_ene(ndt,:))-(1.0-deltaf)*sum(kin_ene(1,:))
         write(stdout,*)'ntime=',nt,' total energy=',field_ene(ndt)
+        write(totenergy_file,*)field_ene(ndt)
+        
 
         if(nt==1)then   !第一次迭代，打开文件并写入部分信息。nfield指movie.out文件,particlefile指particle_xv.txt文件
             ! Maxwellian f_0, \int(f_0)dv=nparticle
