@@ -24,7 +24,7 @@
     integer :: stdout=1,imarker=1 !stdout=0: output to display; 1: to file "PIC1D.out"
     integer :: parafile=114,field_E_file=514,totenergy_file=1919 !parafile 指代保存参数的文件
     !1: load physical PDF; 0: uniform for [-vmax,vmax]
-    real :: vmax=5.0  ,vbeam=0.5         !velocity space range [-vmax,vmax], f_m(v=5)=0.000003
+    real :: vmax=5.0  ,vbeam=1         !velocity space range [-vmax,vmax], f_m(v=5)=0.000003
     real :: linear=0.0         !1.0 for linear simulation; 0.0 for nonlinear.
     real :: deltaf=0.0         !1.0 for delta_f simulation, 0.0 for full_f
 

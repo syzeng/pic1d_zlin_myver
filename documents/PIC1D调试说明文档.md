@@ -1,5 +1,3 @@
-![eigenmode](./refphoto/eigenmode.png)
-
 ## PIC1D主程序算法框架
 
 1. **初始化阶段**：
@@ -416,3 +414,13 @@ $\gamma-x$图：
 ![gamma-x](./refphoto/gamma-x.png)
 
 这样得到的 $\gamma$ 是分布函数f,电场E的增长率 $\gamma_{\text {Efield}}$ 。如果我们考虑电场能量，其增长率$\gamma_{energy}=2\gamma_{\text {Efield}}$
+
+## 双流不稳定性——数值验证
+
+选取电场能量$W_E$作为输出量。设置滤波器，仅保留基频($k_m=1$)。选取不同的v，看 $W_E$ 随时演化对数图，取其中近似直线部分，拟合，得增长率。
+
+![E_field_energy_over_time_vb=1](refphoto/E_field_energy_over_time_vb=1.jpg)
+
+![kv1gamma](refphoto/kv1gamma.jpg)
+
+![gamma_energy_fit_analy](refphoto/gamma_energy_fit_analy.jpg)

@@ -25,11 +25,23 @@ python动图绘制程序：py_imageio_combine2gif.py
 尽管平均到网格的做法过于粗糙，但可以直接绘制分布函数。
 
 ### twostream_growth
-
 考察增长率。
+fortran程序：pic1d_diy_2stream_fullf.f90
+此fortran程序大致和twostream_particle_cloud 中的一样，但输出端做了更改，输出电场能量随时演化文件"Ef_energy.txt"。同时滤波器默认选取只通基频。
 
+py_readEfieldEnergy_plot.py
+读取Ef_energy.txt,绘制电场能量随时演化对数图，方便目测选取拟合区域。
 
+py_fieldEnergy_fit.py
+由py_readEfieldEnergy_plot.py更改而来，读取Ef_energy.txt，对数处理，选段线性拟合，输出拟合效果图和拟合参数（斜率、斜率的不确定度）。
 
+数据保存：kv-gamma.xlsx
+在拟合得到增长率后，将结果复制到excel里。
+
+#### 理论解程序
+pyplot_yx.py 绘制y-x曲线
+pyplot_gamma.py 绘制gammaE-kv图
+pyplot_energy_gamma.py 绘制能量增长率理论解和数值拟合结果，对比。 
 
 ### results 运行结果和中间文件
 运行结果保存在results中，由于中间文件较多较大，在git中被忽略。
