@@ -24,7 +24,7 @@
     integer :: stdout=1,imarker=1 !stdout=0: output to display; 1: to file "PIC1D.out"
     integer :: parafile=114,field_E_file=514,totenergy_file=1919 !parafile 指代保存参数的文件
     !1: load physical PDF; 0: uniform for [-vmax,vmax]
-    real :: vmax=5.0  ,vbeam=1.0          !velocity space range [-vmax,vmax], f_m(v=5)=0.000003
+    real :: vmax=5.0  ,vbeam=0.5         !velocity space range [-vmax,vmax], f_m(v=5)=0.000003
     real :: linear=0.0         !1.0 for linear simulation; 0.0 for nonlinear.
     real :: deltaf=0.0         !1.0 for delta_f simulation, 0.0 for full_f
 
@@ -82,6 +82,7 @@
     !保存参数
     open(parafile,file='parameter_save.txt',status='replace')
     write(parafile,101)nparticle,ntime,ndiag
+    write(parafile,*)vbeam
     close(parafile)
     101 format(i6)
 
@@ -271,7 +272,7 @@
     ! mode filtering: k=0,1,...,ngrid/2
     filter=0.0
     !filter=1.0 !全通
-    filter(2:ngrid/8)=1.0
+    !filter(2:ngrid/8)=1.0
     filter(2)=1.0		! filter out all modes except k=2*pi/xsize
 
     charge=0.0
@@ -413,8 +414,8 @@
             write(nfield,101)nvelocity/2,ngrid,(ntime-1)/ndiag+1
             write(nfield,102)2.0*vmax/real(nvelocity-1),deltax,tstep*real(ndiag)
             !open(particlefile,file='particle_xv.txt',status='replace')
-            open(partfx,file='particle_x.txt',status='replace')
-            open(partfv,file='particle_v.txt',status='replace')
+            ! open(partfx,file='particle_x.txt',status='replace')
+            ! open(partfv,file='particle_v.txt',status='replace')
         endif
 
         k=1 !只记录电子
@@ -423,8 +424,8 @@
         do i=1,nparticle
             !记录所有粒子信息
             !write(particlefile,102)x(i,k),v(i,k)
-            write(partfx,102)x(i,k)
-            write(partfv,102)v(i,k)
+            ! write(partfx,102)x(i,k)
+            ! write(partfv,102)v(i,k)
             ! velocity space grid
             jv=max(1,min(nvelocity,int((v(i,k)*vth_inv+vmax)*dv_inv+1)))
             ! configuration space grid

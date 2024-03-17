@@ -176,6 +176,8 @@ python动图绘制程序：py_imageio_combine2gif.py
 初始时刻图如下。对比可见，此情况下演化，相空间变化不大。这是对平衡情况验证。
 ![scatter_plot_idiag_1-1](./refphoto/scatter_plot_idiag_1-1.png)
 
+
+
 ## 双流初始条件下的演化
 
 ### 初始速度的设置
@@ -281,26 +283,6 @@ elseif(k==1)then
 
 ![dcolorslow_animation_nparticle_60000_ntime_3000_ndiag_10](./refphoto/filter2-8_401.png)
 
-### 能量的演化
-前面提到，此程序在PIC1D.out中输出了总扰动能量的结果。现在，我们自己写一段，导出电场能量和总扰动能量。
-
-```fortran
-!首先在parameter区设置文件句柄
-integer :: parafile=114,field_E_file=514,totenergy_file=1919 
-
-!parafile 指代保存参数的文件
-!在主程序中
-open(field_E_file,file='Ef_energy.out',status='replace')
-open(totenergy_file,file='total_perturb_energy.out',status='replace')
-
-!在field子程序的诊断部分
-write(field_E_file,*)field_ene(ndt)
-! total perturbed energy
-field_ene(ndt)=field_ene(ndt)+sum(kin_ene(ndt,:))-(1.0-deltaf)*sum(kin_ene(1,:))
-write(stdout,*)'ntime=',nt,' total energy=',field_ene(ndt)
-write(totenergy_file,*)field_ene(ndt)
-```
-
 ### 模数行为的保存：phi_mode
 
 phi_mode保存了不同时刻的phi_k，本质上是电势展开成傅里叶级数后级数的系数。
@@ -362,3 +344,75 @@ delta_f和full_f行为完全不同。暂时不理解为什么。
 ![nt=120](refphoto/nt=120.png)
 
 ![my_anifull](refphoto/my_anifull.gif)
+
+### 能量的演化
+
+前面提到，此程序在PIC1D.out中输出了总扰动能量的结果。现在，我们自己写一段，导出电场能量和总扰动能量。
+
+```fortran
+!首先在parameter区设置文件句柄
+integer :: parafile=114,field_E_file=514,totenergy_file=1919 
+
+!parafile 指代保存参数的文件
+!在主程序中
+open(field_E_file,file='Ef_energy.out',status='replace')
+open(totenergy_file,file='total_perturb_energy.out',status='replace')
+
+!在field子程序的诊断部分
+write(field_E_file,*)field_ene(ndt)
+! total perturbed energy
+field_ene(ndt)=field_ene(ndt)+sum(kin_ene(ndt,:))-(1.0-deltaf)*sum(kin_ene(1,:))
+write(stdout,*)'ntime=',nt,' total energy=',field_ene(ndt)
+write(totenergy_file,*)field_ene(ndt)
+```
+
+### 
+
+
+
+## 双流不稳定性——理论
+
+对于线性化vlasov方程，取平面波解 $exp(-i(kx-wt))$，可以得到色散关系，要求
+$$
+w^{4} - (2 k^{2} V_{b}^{2} + w_{p e}^{2}) w^{2} + k^{2} V_{b}^{2} (k^{2} V_{b}^{2} - w_{p e}^{2}) = 0
+$$
+意思是：如果解是 $exp(-i(kx-wt))$ 形式，那么w和k满足上述关系。实际上初始条件包含了一系列这样的解，在线性阶段，这些解会独立演化，有的增长有的衰退，最终是增长率最大的模式涨起来。
+
+二次方程求根公式
+$$
+w^2 = \frac{(2 k^2 V_b^2 + w_{pe}^2) \pm \sqrt{(2 k^2 V_b^2 + w_{pe}^2)^2 - 4(k^2 V_b^2)(k^2 V_b^2 - w_{pe}^2)}}{2} 
+$$
+化简得
+$$
+w^2 = k^2 V_b^2 + \frac{w_{pe}^2}{2} \pm \frac{1}{2}\sqrt{8k^2 V_b^2 w_{pe}^2 + w_{pe}^4}
+$$
+
+记
+$$
+x=\frac{kV_b}{w_{pe}} =\frac{k_m V_b}{w_{pe}L/2\pi},\quad  y=(w/w_{pe})^2 , \quad  k=\frac{2\pi k_m}{L},k_m=0,1,2,\dots
+$$
+则
+$$
+y=x^2+\frac{1}{2} \pm \frac{1}{2}\sqrt{8x^2+1}
+$$
+这里我们已经假设L有限，那么k只能取一系列分立的值。
+
+当y<0时，w为虚数，虚部为负时对应正的增长率 $\gamma$​ .
+$$
+\gamma=|Im(\sqrt{y})|w_{pe}=
+\begin{cases}
+  \sqrt{|y|}  w_{pe} & , y <0, \\
+  0 & , y>0.
+\end{cases}
+$$
+
+
+y-x图像如下。由y-x性质知，当|x|<1 时，y负分支小于零，此时可以存在正的$\gamma$​ ，否则都将是不会增长的波动解。
+
+![yxplot](./refphoto/yxplot.png)
+
+$\gamma-x$图：
+
+![gamma-x](./refphoto/gamma-x.png)
+
+这样得到的 $\gamma$ 是分布函数f,电场E的增长率 $\gamma_{\text {Efield}}$ 。如果我们考虑电场能量，其增长率$\gamma_{energy}=2\gamma_{\text {Efield}}$
